@@ -1,195 +1,1275 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill Generator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bill Generator · Himachal Guest House</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Young+Serif&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --pine: #1F3B2D;
+    --pine-2: #2E5541;
+    --ink: #1A2320;
+    --muted: #5B6A64;
+    --snow: #F6F8F7;
+    --glacier: #DDE8E3;
+    --rule: #C7D2CD;
+    --marigold: #D9A21B;
+    --danger: #B3261E;
+    --paper: #FFFFFF;
+    --ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: "Young Serif", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--ui);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--snow);
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
 
-    <!-- Import html2canvas & jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  /* ---------- App bar ---------- */
+  .appbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 24px;
+    background: var(--pine);
+    color: #fff;
+  }
+  .appbar h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0.01em; }
+  .appbar h1 span { font-weight: 400; opacity: 0.75; }
+  .appbar-actions { display: flex; gap: 8px; }
+  .appbar .btn-ghost { color: #fff; border-color: rgba(255,255,255,0.35); }
+  .appbar .btn-ghost:hover { background: rgba(255,255,255,0.1); }
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
-        }
-        .container {
-            width: 600px;
-            margin: auto;
-        }
-        input, textarea {
-            width: 100%;
-            margin-bottom: 10px;
-            padding: 8px;
-        }
-        #bill {
-            width: 600px;
-            border: 1px solid #ccc;
-            padding: 15px;
-            text-align: left;
-            background-color: #f9f9f9;
-        }
-        .header {
-            text-align: center;
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .subheader {
-            text-align: center;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-        .section {
-            margin-bottom: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: center;
-        }
-        .total {
-            text-align: right;
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        button {
-            margin-top: 10px;
-            padding: 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-    </style>
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(340px, 460px) 1fr;
+    gap: 32px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 24px 120px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; padding: 20px 14px 140px; gap: 24px; }
+  }
+
+  /* ---------- Form ---------- */
+  fieldset { border: 0; margin: 0 0 26px; padding: 0; min-width: 0; }
+  legend {
+    font-size: 13px; font-weight: 700; color: var(--pine);
+    padding: 0 0 8px; margin-bottom: 12px;
+    border-bottom: 2px solid var(--pine);
+    width: 100%;
+  }
+  .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; min-width: 0; }
+  .field label { font-size: 13px; font-weight: 500; color: var(--muted); }
+  input, select, textarea {
+    width: 100%;
+    padding: 9px 11px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  input:focus, select:focus, textarea:focus { border-color: var(--pine); box-shadow: 0 0 0 3px rgba(31,59,45,0.15); }
+  [aria-invalid="true"] { border-color: var(--danger); }
+  .hint { font-size: 12.5px; color: var(--muted); }
+  .hint.error { color: var(--danger); }
+  .nights-pill {
+    display: inline-block; margin-top: 2px;
+    font-size: 13px; font-weight: 600; color: var(--pine);
+  }
+
+  /* extra charges */
+  .items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .item-row { display: grid; grid-template-columns: 1fr 64px 92px 34px; gap: 8px; align-items: center; }
+  .item-row input { padding: 8px 9px; }
+  .icon-btn {
+    width: 34px; height: 36px; border: 1px solid var(--rule); border-radius: 6px;
+    background: #fff; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1;
+  }
+  .icon-btn:hover { color: var(--danger); border-color: var(--danger); }
+  .empty-note { font-size: 13.5px; color: var(--muted); margin: 0 0 10px; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 6px; border: 1px solid transparent;
+    font-weight: 600; font-size: 14.5px; cursor: pointer; white-space: nowrap;
+    transition: background .15s, border-color .15s;
+  }
+  .btn-primary { background: var(--pine); color: #fff; }
+  .btn-primary:hover { background: var(--pine-2); }
+  .btn-ghost { background: transparent; border-color: var(--rule); color: var(--ink); }
+  .btn-ghost:hover { background: var(--glacier); }
+  .btn-link { background: none; border: 0; color: var(--pine); font-weight: 600; padding: 4px 0; cursor: pointer; }
+  .btn-link:hover { text-decoration: underline; }
+  .btn:focus-visible, .btn-link:focus-visible, .icon-btn:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+  .btn[disabled] { opacity: .6; cursor: progress; }
+
+  .actionbar {
+    position: sticky; bottom: 0;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 12px 0 14px;
+    background: var(--snow);
+    border-top: 1px solid var(--rule);
+  }
+  .errors {
+    width: 100%; margin: 0 0 4px; padding: 10px 12px;
+    border-left: 3px solid var(--danger); background: #FBECEA; color: #6B1A14;
+    font-size: 13.5px; border-radius: 0 6px 6px 0;
+  }
+  .errors ul { margin: 4px 0 0; padding-left: 18px; }
+  .edit-banner {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px;
+    margin: 0 0 22px; padding: 10px 14px;
+    background: var(--glacier); border-left: 3px solid var(--pine); border-radius: 0 6px 6px 0;
+    font-size: 14px;
+  }
+  .edit-banner[hidden] { display: none; }
+
+  /* ---------- Bill paper ---------- */
+  .preview-wrap { position: sticky; top: 20px; }
+  @media (max-width: 960px) { .preview-wrap { position: static; } }
+  .preview-label { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .paper-scroll { overflow-x: auto; }
+  #bill {
+    width: 100%; max-width: 720px; min-width: 520px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 var(--rule), 0 18px 40px -24px rgba(31,59,45,0.45);
+    overflow: hidden;
+  }
+  #bill.capturing { width: 720px; max-width: none; min-width: 0; border: 0; border-radius: 0; box-shadow: none; }
+
+  .ridge { display: block; width: 100%; height: 64px; }
+  .bill-body { padding: 20px 36px 30px; }
+  .bill-head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-end; }
+  .bill-name { font-family: var(--display); font-size: 30px; line-height: 1.1; color: var(--pine); margin: 0 0 6px; font-weight: 400; }
+  .bill-biz { font-size: 13px; color: var(--muted); line-height: 1.55; white-space: pre-line; }
+  .bill-meta { text-align: right; font-size: 13px; line-height: 1.7; flex-shrink: 0; }
+  .bill-meta .doc-title { font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: 0.02em; }
+  .bill-meta b { font-weight: 600; }
+
+  .bill-parties { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; margin: 24px 0 20px; padding: 16px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .bill-parties h3 { margin: 0 0 4px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .bill-parties p { margin: 0; font-size: 14px; line-height: 1.55; }
+  .bill-parties .guest-name { font-weight: 700; font-size: 15.5px; }
+  .ph { color: #A3B0AB; font-style: italic; }
+
+  .bill-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .bill-table th { text-align: left; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 8px 6px; border-bottom: 2px solid var(--pine); }
+  .bill-table td { padding: 10px 6px; border-bottom: 1px solid var(--glacier); vertical-align: top; }
+  .bill-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bill-table .sub { display: block; font-size: 12.5px; color: var(--muted); }
+
+  .bill-foot { display: grid; grid-template-columns: 1fr 290px; gap: 28px; margin-top: 18px; align-items: start; }
+  .words { font-size: 13px; line-height: 1.55; }
+  .words h3 { margin: 0 0 2px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .words p { margin: 0 0 12px; }
+  .sums { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .sums div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; white-space: nowrap; }
+  .sums .grand { margin-top: 6px; padding-top: 8px; border-top: 2px solid var(--pine); font-weight: 700; font-size: 16px; }
+  .sums .due {
+    margin-top: 8px; padding: 10px 12px; border-radius: 4px;
+    background: var(--marigold); color: #241A00; font-weight: 700; font-size: 17px;
+  }
+  .sums .due.paid { background: var(--glacier); color: var(--pine); }
+  .sums .muted { color: var(--muted); }
+
+  .bill-end { margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--glacier); font-size: 12.5px; color: var(--muted); }
+  .thanks { font-family: var(--display); color: var(--pine); font-size: 16px; }
+
+  /* ---------- Dialogs ---------- */
+  dialog {
+    border: 0; border-radius: 10px; padding: 0; width: min(560px, calc(100vw - 24px));
+    max-height: calc(100vh - 40px);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(26,35,32,0.5); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--rule); }
+  .dlg-head h2 { margin: 0; font-size: 17px; }
+  .dlg-body { padding: 18px 20px; overflow-y: auto; max-height: calc(100vh - 180px); }
+  .dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--rule); }
+
+  .history-list { list-style: none; margin: 12px 0 0; padding: 0; }
+  .history-list li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--glacier); align-items: center; }
+  .history-list .h-main { font-weight: 600; }
+  .history-list .h-sub { font-size: 13px; color: var(--muted); grid-column: 1; }
+  .history-list .h-amt { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .history-list .h-actions { grid-column: 2; display: flex; gap: 12px; justify-content: flex-end; }
+  .history-list .btn-link.danger { color: var(--danger); }
+  .dlg-foot.split { justify-content: space-between; flex-wrap: wrap; }
+  .dlg-foot .hint { align-self: center; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 6px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  .layout > * { min-width: 0; }
+
+  @media (max-width: 560px) {
+    .row, .row.three { grid-template-columns: 1fr; }
+    .appbar { padding: 10px 14px; }
+    .appbar h1 { font-size: 15px; }
+    .appbar h1 span { display: none; }
+    .appbar .btn { padding: 7px 10px; font-size: 13.5px; }
+    .actionbar { background: var(--snow); border-top: 1px solid var(--rule); }
+    .actionbar .btn { flex: 1 1 auto; }
+    /* Narrow on-screen bill; the PDF capture (.capturing) keeps the full A4 layout */
+    #bill:not(.capturing) { min-width: 0; }
+    #bill:not(.capturing) .bill-body { padding: 14px 18px 22px; }
+    #bill:not(.capturing) .bill-head { flex-direction: column; align-items: flex-start; }
+    #bill:not(.capturing) .bill-meta { text-align: left; }
+    #bill:not(.capturing) .bill-name { font-size: 24px; }
+    #bill:not(.capturing) .bill-parties,
+    #bill:not(.capturing) .bill-foot { grid-template-columns: 1fr; gap: 14px; }
+    #bill:not(.capturing) .bill-end { flex-direction: column; align-items: stretch; }
+  }
+
+  /* ---------- Print: just the bill ---------- */
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body { background: #fff; }
+    .appbar, .form-col, .preview-label, .toast, dialog { display: none !important; }
+    .layout { display: block; padding: 0; max-width: none; }
+    .preview-wrap { position: static; }
+    #bill { box-shadow: none; border: 0; max-width: none; min-width: 0; width: 100%; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Bill Generator</h2>
+<header class="appbar">
+  <h1>Bill Generator <span>· <span id="appBizName">Himachal Guest House</span></span></h1>
+  <div class="appbar-actions">
+    <button type="button" class="btn btn-ghost" id="openHistory">Saved bills</button>
+    <button type="button" class="btn btn-ghost" id="openSettings">Business details</button>
+  </div>
+</header>
 
-    <form id="billForm">
-        <input type="date" id="startDate" required>
-        <input type="date" id="endDate" required>
-        <input type="text" id="customerName" placeholder="Customer Name" required>
-        <input type="text" id="customerPhone" placeholder="Customer Phone Number" required>
-        <textarea id="customerAddress" placeholder="Customer Address" required></textarea>
-        <input type="text" id="description" placeholder="Room Description" required>
-        <input type="number" id="price" placeholder="Price per Night" required>
-
-        <button type="button" onclick="generateBill()">Generate Bill</button>
-        <button type="button" onclick="downloadPDF()">Download PDF</button>
-    </form>
-
-    <!-- Bill Preview Section -->
-    <div id="bill">
-        <div class="header">Himachal Guest House</div>
-        <div class="subheader">
-            <strong>Address: VPO Khera, Teh. Nalagarh, Solan, HP</strong> <br>
-            <strong>Phone: +91-9418450853</strong>
-        </div>
-        <hr>
-        <div class="section">
-            <strong>Invoice #</strong> <span id="billInvoice"></span><br>
-            <strong>Date:</strong> <span id="billDates"></span>
-        </div>
-        <div class="section">
-            <strong>Billed To:</strong> <span id="billCustomer"></span><br>
-            <strong>Phone:</strong> <span id="billCustomerPhone"></span><br>
-            <strong>Address:</strong> <span id="billCustomerAddress"></span>
-        </div>
-        <table>
-            <tr>
-                <th>Description</th>
-                <th>Price</th>
-                <th>Days</th>
-                <th>Total</th>
-            </tr>
-            <tr>
-                <td id="billDescription"></td>
-                <td id="billPrice"></td>
-                <td id="billDays"></td>
-                <td id="billTotal"></td>
-            </tr>
-        </table>
-        <div class="total">Total: ₹<span id="billGrandTotal"></span> (Including all taxes)</div>
-        <div style="text-align: center; margin-top: 10px;">THIS IS A SYSTEM GENERATED BILL.</div>
+<main class="layout">
+  <!-- ================= FORM ================= -->
+  <section class="form-col" aria-label="Bill details">
+    <div class="edit-banner" id="editBanner" role="status" hidden>
+      <span id="editBannerText"></span>
+      <button type="button" class="btn-link" id="bannerNewBtn">Start a new bill</button>
     </div>
-</div>
+    <form id="billForm" novalidate autocomplete="off">
+      <fieldset>
+        <legend>Stay</legend>
+        <div class="row">
+          <div class="field">
+            <label for="checkIn">Check-in</label>
+            <input type="date" id="checkIn" required>
+          </div>
+          <div class="field">
+            <label for="checkOut">Check-out</label>
+            <input type="date" id="checkOut" required>
+          </div>
+        </div>
+        <div class="nights-pill" id="nightsInfo" aria-live="polite"></div>
+        <div class="row three" style="margin-top:10px">
+          <div class="field" style="grid-column: span 3">
+            <label for="roomDesc">Room</label>
+            <input type="text" id="roomDesc" list="roomTypes" placeholder="e.g. Deluxe double room" required>
+            <datalist id="roomTypes">
+              <option value="Standard room">
+              <option value="Deluxe double room">
+              <option value="Family suite">
+              <option value="Dormitory bed">
+            </datalist>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="roomRate">Rate per night (₹)</label>
+            <input type="number" id="roomRate" min="0" step="0.01" inputmode="decimal" placeholder="1500" required>
+          </div>
+          <div class="field">
+            <label for="roomCount">Rooms</label>
+            <input type="number" id="roomCount" min="1" step="1" value="1" inputmode="numeric" required>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Guest</legend>
+        <div class="row">
+          <div class="field">
+            <label for="guestName">Name</label>
+            <input type="text" id="guestName" autocomplete="off" required>
+          </div>
+          <div class="field">
+            <label for="guestPhone">Phone</label>
+            <input type="tel" id="guestPhone" inputmode="tel" placeholder="10-digit mobile" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="guestAddress">Address</label>
+          <textarea id="guestAddress" rows="2"></textarea>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="guestCount">Guests</label>
+            <input type="number" id="guestCount" min="1" step="1" value="1" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="guestGstin">Guest GSTIN <span class="hint">(optional)</span></label>
+            <input type="text" id="guestGstin" maxlength="15" style="text-transform:uppercase">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Other charges</legend>
+        <p class="empty-note" id="itemsEmpty">Meals, extra beds, laundry or taxi go here.</p>
+        <div class="items" id="items"></div>
+        <button type="button" class="btn-link" id="addItem">+ Add a charge</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Payment</legend>
+        <div class="row">
+          <div class="field">
+            <label for="discount">Discount (₹)</label>
+            <input type="number" id="discount" min="0" step="0.01" inputmode="decimal" value="0">
+          </div>
+          <div class="field">
+            <label for="gstRate">GST</label>
+            <select id="gstRate">
+              <option value="0">None (prices include taxes)</option>
+              <option value="5">5% (room up to ₹7,500/night)</option>
+              <option value="18">18% (room above ₹7,500/night)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="advance">Already paid (₹)</label>
+            <input type="number" id="advance" min="0" step="0.01" inputmode="decimal" value="0">
+          </div>
+          <div class="field">
+            <label for="payMode">Paid by</label>
+            <select id="payMode">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Card</option>
+              <option>Bank transfer</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="notes">Note on bill <span class="hint">(optional)</span></label>
+          <input type="text" id="notes" placeholder="e.g. Check-out time 11 AM">
+        </div>
+      </fieldset>
+
+      <div class="actionbar">
+        <div class="errors" id="errors" role="alert" hidden></div>
+        <button type="button" class="btn btn-primary" id="shareBtn" hidden>Save &amp; share PDF</button>
+        <button type="button" class="btn btn-primary" id="downloadBtn">Save &amp; download PDF</button>
+        <button type="button" class="btn btn-ghost" id="printBtn">Save &amp; print</button>
+        <button type="button" class="btn btn-ghost" id="newBtn">New bill</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ================= PREVIEW ================= -->
+  <section class="preview-wrap" aria-label="Bill preview">
+    <p class="preview-label">Live preview. This is exactly what the guest receives.</p>
+    <div class="paper-scroll">
+      <article id="bill">
+        <svg class="ridge" viewBox="0 0 720 64" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 64 L0 44 L60 30 L110 40 L170 14 L215 32 L262 22 L320 46 L380 18 L430 6 L480 28 L530 20 L585 40 L640 24 L690 34 L720 28 L720 64 Z" fill="#DDE8E3"/>
+          <path d="M0 64 L0 52 L70 42 L130 50 L200 34 L260 46 L330 38 L400 54 L470 40 L540 50 L610 36 L670 46 L720 40 L720 64 Z" fill="#1F3B2D"/>
+        </svg>
+        <div class="bill-body">
+          <div class="bill-head">
+            <div>
+              <h2 class="bill-name" id="bBizName"></h2>
+              <div class="bill-biz" id="bBizInfo"></div>
+            </div>
+            <div class="bill-meta">
+              <div class="doc-title" id="bDocTitle">Invoice</div>
+              <div><b>No.</b> <span id="bInvoice"></span></div>
+              <div><b>Date</b> <span id="bDate"></span></div>
+            </div>
+          </div>
+
+          <div class="bill-parties">
+            <div>
+              <h3>Billed to</h3>
+              <p class="guest-name" id="bGuest"></p>
+              <p id="bGuestPhone"></p>
+              <p id="bGuestAddr"></p>
+              <p id="bGuestGstin"></p>
+            </div>
+            <div>
+              <h3>Stay</h3>
+              <p id="bStay"></p>
+              <p id="bNights"></p>
+              <p id="bGuests"></p>
+            </div>
+          </div>
+
+          <table class="bill-table">
+            <thead>
+              <tr>
+                <th scope="col">Description</th>
+                <th scope="col" class="num">Rate</th>
+                <th scope="col" class="num">Qty</th>
+                <th scope="col" class="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="bLines"></tbody>
+          </table>
+
+          <div class="bill-foot">
+            <div class="words">
+              <h3>Amount in words</h3>
+              <p id="bWords"></p>
+              <div id="bNoteWrap" hidden>
+                <h3>Note</h3>
+                <p id="bNote"></p>
+              </div>
+            </div>
+            <div class="sums" id="bSums"></div>
+          </div>
+
+          <div class="bill-end">
+            <div class="thanks">Thank you for staying with us.</div>
+            <div>This is a computer-generated bill and needs no signature.</div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<!-- ================= SAVED BILLS ================= -->
+<dialog id="historyDlg" aria-labelledby="historyTitle">
+  <div class="dlg-head">
+    <h2 id="historyTitle">Saved bills</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Close">×</button>
+  </div>
+  <div class="dlg-body">
+    <label class="sr-only" for="historySearch">Search saved bills</label>
+    <input type="search" id="historySearch" placeholder="Search by name, phone or invoice no.">
+    <ul class="history-list" id="historyList"></ul>
+  </div>
+  <div class="dlg-foot split">
+    <span class="hint">Bills are kept in this browser only. Download a backup now and then.</span>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <button type="button" class="btn btn-ghost" id="exportCsv">Download CSV</button>
+      <button type="button" class="btn btn-ghost" id="exportBackup">Download backup</button>
+      <button type="button" class="btn btn-ghost" id="importBackup">Restore backup</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+  </div>
+</dialog>
+
+<!-- ================= SETTINGS ================= -->
+<dialog id="settingsDlg" aria-labelledby="settingsTitle">
+  <form method="dialog" id="settingsForm">
+    <div class="dlg-head">
+      <h2 id="settingsTitle">Business details</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body">
+      <div class="field"><label for="sName">Guest house name</label><input type="text" id="sName" required></div>
+      <div class="field"><label for="sAddress">Address</label><textarea id="sAddress" rows="2"></textarea></div>
+      <div class="row">
+        <div class="field"><label for="sPhone">Phone</label><input type="text" id="sPhone"></div>
+        <div class="field"><label for="sEmail">Email <span class="hint">(optional)</span></label><input type="email" id="sEmail"></div>
+      </div>
+      <div class="field"><label for="sGstin">GSTIN <span class="hint">(optional)</span></label><input type="text" id="sGstin" maxlength="15" style="text-transform:uppercase"></div>
+      <p class="hint">Saved on this device and printed at the top of every bill.</p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn btn-primary">Save details</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-    let billCount = 1; // Track daily bills
+(() => {
+  "use strict";
 
-    function generateInvoiceNumber() {
-        let today = new Date();
-        let year = today.getFullYear();
-        let month = String(today.getMonth() + 1).padStart(2, '0');
-        let date = String(today.getDate()).padStart(2, '0');
-        let invoiceNumber = `${year}${month}${date}${String(billCount).padStart(2, '0')}`;
-        billCount++; // Increment for the next bill
-        return invoiceNumber;
+  /* ---------------- Storage ---------------- */
+  const KEYS = { biz: "hgh.business", bills: "hgh.bills", counter: "hgh.counter" };
+  const DEFAULT_BIZ = {
+    name: "Himachal Guest House",
+    address: "VPO Khera, Teh. Nalagarh, Distt. Solan, Himachal Pradesh",
+    phone: "+91-9418450853",
+    email: "",
+    gstin: ""
+  };
+  const load = (k, fallback) => {
+    try { const v = JSON.parse(localStorage.getItem(k)); return v ?? fallback; }
+    catch { return fallback; }
+  };
+  const save = (k, v) => {
+    try { localStorage.setItem(k, JSON.stringify(v)); return true; }
+    catch (e) { console.error(e); return false; }
+  };
+
+  let biz = { ...DEFAULT_BIZ, ...load(KEYS.biz, {}) };
+
+  /* ---------------- Helpers ---------------- */
+  const $ = (id) => document.getElementById(id);
+  const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  const fmtNum = (n) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const inr = (n) => "₹" + fmtNum(n);
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const todayYMD = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+  const parseYMD = (s) => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  const addDays = (s, n) => { const d = new Date(parseYMD(s) + n * 86400000); return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`; };
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmtDate = (s) => {
+    if (!s) return "";
+    const [y, m, d] = s.split("-").map(Number);
+    return `${pad2(d)} ${MONTHS[m - 1]} ${y}`;
+  };
+  const nightsBetween = (a, b) => (a && b) ? Math.round((parseYMD(b) - parseYMD(a)) / 86400000) : null;
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const isWholeAtLeast1 = (v) => { const n = Number(v); return Number.isInteger(n) && n >= 1; };
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const setText = (el, text, placeholder) => {
+    if (text) { el.textContent = text; el.classList.remove("ph"); }
+    else { el.textContent = placeholder || ""; el.classList.toggle("ph", !!placeholder); }
+  };
+
+  /* Indian-system number to words */
+  const ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+    "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  function below1000(n) {
+    let s = "";
+    if (n >= 100) { s += ONES[Math.floor(n / 100)] + " Hundred"; n %= 100; if (n) s += " "; }
+    if (n >= 20) { s += TENS[Math.floor(n / 10)]; if (n % 10) s += " " + ONES[n % 10]; }
+    else if (n > 0) s += ONES[n];
+    return s;
+  }
+  function intToWords(n) {
+    if (n === 0) return "Zero";
+    const parts = [];
+    const crore = Math.floor(n / 10000000); n %= 10000000;
+    const lakh = Math.floor(n / 100000); n %= 100000;
+    const thousand = Math.floor(n / 1000); n %= 1000;
+    if (crore) parts.push(intToWords(crore) + " Crore");
+    if (lakh) parts.push(below1000(lakh) + " Lakh");
+    if (thousand) parts.push(below1000(thousand) + " Thousand");
+    if (n) parts.push(below1000(n));
+    return parts.join(" ");
+  }
+  function amountInWords(amount) {
+    const totalPaise = Math.round(Math.max(amount, 0) * 100);
+    const rupees = Math.floor(totalPaise / 100);
+    const paise = totalPaise % 100;
+    let s = "Rupees " + intToWords(rupees);
+    if (paise) s += " and " + intToWords(paise) + " Paise";
+    return s + " Only";
+  }
+
+  /* ---------------- Invoice numbers ----------------
+     Format YYYYMMDDNN. The day's counter is stored on this device and is
+     also checked against saved bills, so a number is never handed out twice.
+     A number is only used up when a bill is saved, not on every preview. */
+  function nextSeq(ymd) {
+    const c = load(KEYS.counter, {});
+    let n = c && c.date === ymd ? Number(c.n) || 0 : 0;
+    load(KEYS.bills, []).forEach(b => {
+      if (b && typeof b.invoiceNo === "string" && b.invoiceNo.startsWith(ymd)) {
+        n = Math.max(n, parseInt(b.invoiceNo.slice(8), 10) || 0);
+      }
+    });
+    return n + 1;
+  }
+  const ymdCompact = () => todayYMD().replace(/-/g, "");
+  const peekInvoiceNo = () => { const y = ymdCompact(); return y + pad2(nextSeq(y)); };
+  function takeInvoiceNo() {
+    const y = ymdCompact();
+    const n = nextSeq(y);
+    save(KEYS.counter, { date: y, n });
+    return y + pad2(n);
+  }
+
+  /* ---------------- State ---------------- */
+  let editing = null;   // { invoiceNo, billDate } once a bill is saved or reopened
+  let dirty = false;    // unsaved changes since last save / load / reset
+  let showErrors = false;
+  const items = [];     // { desc, qty, rate }
+
+  /* ---------------- Extra charges UI ---------------- */
+  (() => {
+    const dl = document.createElement("datalist");
+    dl.id = "chargeTypes";
+    ["Breakfast", "Lunch", "Dinner", "Extra bed", "Laundry", "Taxi", "Room heater"].forEach(v => {
+      const o = document.createElement("option"); o.value = v; dl.appendChild(o);
+    });
+    document.body.appendChild(dl);
+  })();
+
+  function renderItems() {
+    const wrap = $("items");
+    wrap.innerHTML = "";
+    $("itemsEmpty").hidden = items.length > 0;
+    items.forEach((it, i) => {
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.innerHTML = `
+        <input type="text" aria-label="Charge ${i + 1} description" placeholder="e.g. Dinner" list="chargeTypes">
+        <input type="number" aria-label="Charge ${i + 1} quantity" min="1" step="1" inputmode="numeric" placeholder="Qty">
+        <input type="number" aria-label="Charge ${i + 1} rate in rupees" min="0" step="0.01" inputmode="decimal" placeholder="₹ each">
+        <button type="button" class="icon-btn" aria-label="Remove charge ${i + 1}">×</button>`;
+      const [d, q, r, x] = row.children;
+      d.value = it.desc; q.value = it.qty; r.value = it.rate;
+      d.addEventListener("input", () => { it.desc = d.value; });
+      q.addEventListener("input", () => { it.qty = q.value; });
+      r.addEventListener("input", () => { it.rate = r.value; });
+      x.addEventListener("click", () => { items.splice(i, 1); renderItems(); dirty = true; refresh(); });
+      wrap.appendChild(row);
+    });
+  }
+  $("addItem").addEventListener("click", () => {
+    items.push({ desc: "", qty: 1, rate: "" });
+    renderItems();
+    $("items").lastElementChild.querySelector("input").focus();
+    dirty = true;
+    refresh();
+  });
+
+  /* ---------------- Read + calculate ---------------- */
+  const FIELDS = ["checkIn", "checkOut", "roomDesc", "roomRate", "roomCount", "guestName", "guestPhone", "guestAddress",
+    "guestCount", "guestGstin", "discount", "gstRate", "advance", "payMode", "notes"];
+
+  function readForm() {
+    const f = {};
+    FIELDS.forEach(k => { f[k] = $(k).value.trim(); });
+    f.guestGstin = f.guestGstin.toUpperCase();
+    f.items = items.map(i => ({ desc: String(i.desc).trim(), qty: i.qty, rate: i.rate }));
+    return f;
+  }
+
+  function calculate(f) {
+    const nights = nightsBetween(f.checkIn, f.checkOut);
+    const billedNights = nights === 0 ? 1 : nights; // same-day stay bills one night
+    const rooms = isWholeAtLeast1(f.roomCount) ? Number(f.roomCount) : 1;
+    const rate = Math.max(0, num(f.roomRate));
+    const lines = [];
+    if (billedNights && billedNights > 0) {
+      lines.push({
+        desc: f.roomDesc || "Room",
+        sub: (rooms > 1 ? `${plural(rooms, "room")} x ${plural(billedNights, "night")}` : plural(billedNights, "night"))
+          + (num(f.gstRate) > 0 ? " · SAC 996311" : ""),
+        rate, qty: billedNights * rooms,
+        amount: round2(rate * billedNights * rooms)
+      });
     }
+    f.items.forEach(it => {
+      if (!it.desc && !num(it.rate)) return; // fully blank row
+      const q = Math.max(0, num(it.qty)), r = Math.max(0, num(it.rate));
+      lines.push({ desc: it.desc || "Other charge", rate: r, qty: q, amount: round2(q * r) });
+    });
+    const subtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
+    const discount = Math.min(Math.max(0, round2(num(f.discount))), subtotal);
+    const taxable = round2(subtotal - discount);
+    const gstRate = num(f.gstRate);
+    const cgst = round2(taxable * gstRate / 200);
+    const sgst = cgst;
+    const total = round2(taxable + cgst + sgst);
+    const advance = Math.max(0, round2(num(f.advance)));
+    const due = round2(total - advance);
+    return { nights, billedNights, rooms, lines, subtotal, discount, taxable, gstRate, cgst, sgst, total, advance, due };
+  }
 
-    function calculateDays(startDate, endDate) {
-        let start = new Date(startDate);
-        let end = new Date(endDate);
-        let diffTime = end - start;
-        let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert milliseconds to days
-        return diffDays > 0 ? diffDays : 1; // Minimum 1 day stay
+  const GSTIN_RE = /^[0-9]{2}[A-Z0-9]{13}$/;
+  function validate(f, c) {
+    const errs = [];
+    const bad = new Set();
+    const err = (id, msg) => { if (id) bad.add(id); errs.push(msg); };
+
+    if (!f.checkIn || !f.checkOut) { if (!f.checkIn) bad.add("checkIn"); if (!f.checkOut) bad.add("checkOut"); errs.push("Choose check-in and check-out dates."); }
+    else if (c.nights < 0) err("checkOut", "Check-out must be on or after check-in.");
+    else if (c.nights > 365) err("checkOut", "Stay is longer than a year. Check the dates.");
+    if (!f.roomDesc) err("roomDesc", "Describe the room.");
+    if (!(num(f.roomRate) > 0)) err("roomRate", "Enter a room rate above ₹0.");
+    if (!isWholeAtLeast1(f.roomCount)) err("roomCount", "Rooms must be a whole number, 1 or more.");
+    if (!f.guestName) err("guestName", "Enter the guest's name.");
+    const digits = f.guestPhone.replace(/\D/g, "");
+    if (!(digits.length === 10 || (digits.length === 12 && digits.startsWith("91")))) err("guestPhone", "Enter a 10-digit phone number.");
+    if (f.guestCount && !isWholeAtLeast1(f.guestCount)) err("guestCount", "Guests must be a whole number, 1 or more.");
+    if (f.guestGstin && !GSTIN_RE.test(f.guestGstin)) err("guestGstin", "Guest GSTIN should be 15 characters, starting with 2 digits.");
+    f.items.forEach((it, i) => {
+      if (!it.desc && !num(it.rate)) return;
+      if (!it.desc) errs.push(`Describe charge ${i + 1}.`);
+      if (!(num(it.qty) > 0)) errs.push(`Charge ${i + 1} needs a quantity above 0.`);
+      if (num(it.rate) < 0) errs.push(`Charge ${i + 1} can't have a negative rate.`);
+    });
+    if (num(f.discount) < 0) err("discount", "Discount can't be negative.");
+    else if (num(f.discount) > c.subtotal) err("discount", "Discount can't be more than the subtotal.");
+    if (num(f.advance) < 0) err("advance", "Amount paid can't be negative.");
+    if (c.gstRate > 0 && !biz.gstin) err("gstRate", "To charge GST, add your GSTIN in Business details first.");
+
+    FIELDS.forEach(id => $(id).setAttribute("aria-invalid", bad.has(id) ? "true" : "false"));
+    return errs;
+  }
+
+  /* ---------------- Render preview ---------------- */
+  function renderBiz() {
+    $("bBizName").textContent = biz.name;
+    $("appBizName").textContent = biz.name;
+    $("bBizInfo").textContent = bizLines().join("\n");
+  }
+  const bizLines = () => [biz.address, [biz.phone, biz.email].filter(Boolean).join("   "), biz.gstin ? "GSTIN " + biz.gstin : ""].filter(Boolean);
+
+  function sumRows(f, c) {
+    // Shared by the on-screen preview and the PDF so both always agree.
+    const rows = [["Subtotal", c.subtotal, ""]];
+    if (c.discount > 0) rows.push(["Discount", -c.discount, ""]);
+    if (c.gstRate > 0) {
+      if (c.discount > 0) rows.push(["Taxable value", c.taxable, "muted"]);
+      rows.push([`CGST ${c.gstRate / 2}%`, c.cgst, ""]);
+      rows.push([`SGST ${c.gstRate / 2}%`, c.sgst, ""]);
     }
-
-    function generateBill() {
-        let startDate = document.getElementById("startDate").value;
-        let endDate = document.getElementById("endDate").value;
-        let customerName = document.getElementById("customerName").value;
-        let customerPhone = document.getElementById("customerPhone").value;
-        let customerAddress = document.getElementById("customerAddress").value;
-        let description = document.getElementById("description").value;
-        let price = parseFloat(document.getElementById("price").value);
-
-        if (!startDate || !endDate || !customerName || !customerPhone || !customerAddress || !description || isNaN(price) || price <= 0) {
-            alert("Please fill all fields correctly.");
-            return;
-        }
-
-        let days = calculateDays(startDate, endDate);
-        let total = price * days;
-        let invoiceNumber = generateInvoiceNumber();
-
-        document.getElementById("billInvoice").innerText = invoiceNumber;
-        document.getElementById("billDates").innerText = `${startDate} to ${endDate}`;
-        document.getElementById("billCustomer").innerText = customerName;
-        document.getElementById("billCustomerPhone").innerText = customerPhone;
-        document.getElementById("billCustomerAddress").innerText = customerAddress;
-        document.getElementById("billDescription").innerText = description;
-        document.getElementById("billPrice").innerText = "₹" + price;
-        document.getElementById("billDays").innerText = days;
-        document.getElementById("billTotal").innerText = "₹" + total;
-        document.getElementById("billGrandTotal").innerText = total;
+    rows.push([c.gstRate > 0 ? "Total" : "Total (incl. all taxes)", c.total, "grand"]);
+    if (c.advance > 0) {
+      rows.push([`Paid (${f.payMode})`, -c.advance, ""]);
+      if (c.due > 0) rows.push(["Balance due", c.due, "due"]);
+      else if (c.due === 0) rows.push(["Paid in full", 0, "due paid"]);
+      else rows.push(["Refund to guest", -c.due, "due paid"]);
+    } else {
+      rows.push([`Amount due (${f.payMode})`, c.total, "due"]);
     }
+    return rows;
+  }
 
-    function downloadPDF() {
-        const { jsPDF } = window.jspdf;
-        let element = document.getElementById("bill");
+  function refresh() {
+    const f = readForm();
+    const c = calculate(f);
 
-        html2canvas(element, { scale: 2 }).then(canvas => {
-            let imgData = canvas.toDataURL("image/png");
-            let pdf = new jsPDF("p", "mm", "a4");
-            let imgWidth = 190;
-            let imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let position = 10;
+    const ni = $("nightsInfo");
+    ni.style.color = "";
+    if (c.nights === null) ni.textContent = "";
+    else if (c.nights < 0) { ni.textContent = "Check-out is before check-in"; ni.style.color = "var(--danger)"; }
+    else ni.textContent = c.nights === 0 ? "Same-day stay, billed as 1 night" : plural(c.nights, "night");
 
-            pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-            pdf.save("Bill_Receipt_" + document.getElementById("billInvoice").innerText + ".pdf");
-        });
+    $("bDocTitle").textContent = c.gstRate > 0 ? "Tax Invoice" : "Invoice";
+    $("bInvoice").textContent = editing ? editing.invoiceNo : peekInvoiceNo();
+    $("bDate").textContent = fmtDate(editing ? editing.billDate : todayYMD());
+
+    setText($("bGuest"), f.guestName, "Guest name");
+    setText($("bGuestPhone"), f.guestPhone, "Phone");
+    setText($("bGuestAddr"), f.guestAddress);
+    setText($("bGuestGstin"), f.guestGstin ? "GSTIN " + f.guestGstin : "");
+    setText($("bStay"), f.checkIn && f.checkOut ? `${fmtDate(f.checkIn)} to ${fmtDate(f.checkOut)}` : "", "Dates");
+    setText($("bNights"), c.billedNights > 0 ? plural(c.billedNights, "night") : "");
+    setText($("bGuests"), isWholeAtLeast1(f.guestCount) ? plural(Number(f.guestCount), "guest") : "");
+
+    const tbody = $("bLines");
+    tbody.innerHTML = "";
+    if (!c.lines.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4; td.className = "ph"; td.textContent = "Charges appear here as you fill the form.";
+      tr.appendChild(td); tbody.appendChild(tr);
     }
+    c.lines.forEach(l => {
+      const tr = document.createElement("tr");
+      const d = document.createElement("td");
+      d.textContent = l.desc;
+      if (l.sub) { const s = document.createElement("span"); s.className = "sub"; s.textContent = l.sub; d.appendChild(s); }
+      tr.appendChild(d);
+      [inr(l.rate), String(l.qty), inr(l.amount)].forEach(v => {
+        const td = document.createElement("td"); td.className = "num"; td.textContent = v; tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    $("bSums").innerHTML = sumRows(f, c).map(([label, v, cls]) =>
+      `<div class="${cls}"><span>${escapeHtml(label)}</span><span>${v < 0 ? "− " + inr(-v) : inr(v)}</span></div>`).join("");
+    $("bWords").textContent = amountInWords(c.total);
+    $("bNoteWrap").hidden = !f.notes;
+    $("bNote").textContent = f.notes;
+
+    if (showErrors) showValidation(validate(f, c));
+    refreshBanner();
+    return { f, c };
+  }
+
+  /* ---------------- PDF (real text, small, shareable) ---------------- */
+  // jsPDF's built-in fonts only cover Latin characters, so the PDF uses "Rs."
+  // and plain "-"; anything outside Latin-1 is replaced rather than garbled.
+  const pdfSafe = (s) => String(s || "")
+    .replace(/[₹]/g, "Rs.").replace(/[−–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, "?");
+  const rs = (n) => "Rs. " + fmtNum(n);
+
+  function buildPDF(rec) {
+    const { jsPDF } = window.jspdf;
+    const f = rec.form, c = calculate(f);
+    const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
+    const W = 210, H = 297, M = 16, R = W - M, BOTTOM = H - 18;
+    const COL = { pine: [31, 59, 45], ink: [26, 35, 32], muted: [91, 106, 100], glacier: [221, 232, 227], rule: [199, 210, 205], marigold: [217, 162, 27], dueInk: [36, 26, 0] };
+    const font = (size, style = "normal", color = COL.ink, family = "helvetica") => {
+      pdf.setFont(family, style); pdf.setFontSize(size); pdf.setTextColor(...color);
+    };
+    const lh = (size) => size * 0.3528 * 1.4;
+    const text = (s, x, y, opts) => pdf.text(pdfSafe(s), x, y, opts);
+    const wrap = (s, width) => pdf.splitTextToSize(pdfSafe(s), width);
+    const hline = (y, color = COL.rule, w = 0.3, x1 = M, x2 = R) => { pdf.setDrawColor(...color); pdf.setLineWidth(w); pdf.line(x1, y, x2, y); };
+
+    // Mountain ridge band
+    const sx = W / 720, sy = 20 / 64;
+    const poly = (pts, color) => {
+      pdf.setFillColor(...color);
+      const abs = pts.map(([x, y]) => [x * sx, y * sy]);
+      const deltas = abs.slice(1).map((p, i) => [p[0] - abs[i][0], p[1] - abs[i][1]]);
+      pdf.lines(deltas, abs[0][0], abs[0][1], [1, 1], "F", true);
+    };
+    poly([[0,64],[0,44],[60,30],[110,40],[170,14],[215,32],[262,22],[320,46],[380,18],[430,6],[480,28],[530,20],[585,40],[640,24],[690,34],[720,28],[720,64]], COL.glacier);
+    poly([[0,64],[0,52],[70,42],[130,50],[200,34],[260,46],[330,38],[400,54],[470,40],[540,50],[610,36],[670,46],[720,40],[720,64]], COL.pine);
+
+    // Header
+    let y = 33;
+    font(22, "bold", COL.pine, "times");
+    const nameLines = wrap(biz.name, 120);
+    text(nameLines, M, y);
+    font(15, "bold", COL.ink);
+    text(c.gstRate > 0 ? "Tax Invoice" : "Invoice", R, y, { align: "right" });
+    let yl = y + (nameLines.length - 1) * lh(22) + 7;
+    font(9.5, "normal", COL.muted);
+    bizLines().forEach(line => { wrap(line, 120).forEach(l => { text(l, M, yl); yl += lh(9.5); }); });
+    let yr = y + 7;
+    font(9.5, "normal", COL.ink);
+    text(`No. ${rec.invoiceNo}`, R, yr, { align: "right" }); yr += lh(9.5);
+    text(`Date ${fmtDate(rec.billDate)}`, R, yr, { align: "right" }); yr += lh(9.5);
+    y = Math.max(yl, yr) + 3;
+    hline(y);
+
+    // Billed to / Stay
+    y += 7;
+    const colR = 122;
+    font(8.5, "bold", COL.muted);
+    text("Billed to", M, y); text("Stay", colR, y);
+    yl = yr = y + 5.5;
+    font(11, "bold", COL.ink);
+    wrap(f.guestName, 100).forEach(l => { text(l, M, yl); yl += lh(11); });
+    font(9.5, "normal", COL.ink);
+    [f.guestPhone, f.guestAddress, f.guestGstin ? "GSTIN " + f.guestGstin : ""].filter(Boolean)
+      .forEach(s => wrap(s, 100).forEach(l => { text(l, M, yl); yl += lh(9.5); }));
+    [`${fmtDate(f.checkIn)} to ${fmtDate(f.checkOut)}`, plural(c.billedNights, "night"),
+     isWholeAtLeast1(f.guestCount) ? plural(Number(f.guestCount), "guest") : ""].filter(Boolean)
+      .forEach(s => { text(s, colR, yr); yr += lh(9.5); });
+    y = Math.max(yl, yr) + 2;
+    hline(y);
+
+    // Charges table
+    const X_RATE = 140, X_QTY = 158;
+    const tableHead = () => {
+      font(8.5, "bold", COL.muted);
+      text("Description", M, y); text("Rate", X_RATE, y, { align: "right" });
+      text("Qty", X_QTY, y, { align: "right" }); text("Amount", R, y, { align: "right" });
+      hline(y + 2.5, COL.pine, 0.5);
+      y += 8;
+    };
+    y += 9;
+    tableHead();
+    c.lines.forEach(l => {
+      font(10, "normal", COL.ink);
+      const d = wrap(l.desc, 92);
+      const rowH = d.length * lh(10) + (l.sub ? lh(8.5) : 0) + 2.5;
+      if (y + rowH > BOTTOM) { pdf.addPage(); y = 22; tableHead(); }
+      font(10, "normal", COL.ink);
+      text(d, M, y);
+      text(rs(l.rate), X_RATE, y, { align: "right" });
+      text(String(l.qty), X_QTY, y, { align: "right" });
+      text(rs(l.amount), R, y, { align: "right" });
+      let yy = y + d.length * lh(10);
+      if (l.sub) { font(8.5, "normal", COL.muted); text(l.sub, M, yy - 0.8); yy += lh(8.5); }
+      hline(yy - 2.2, COL.glacier, 0.3);
+      y = yy + 3;
+    });
+
+    // Totals + amount in words
+    const rows = sumRows(f, c);
+    const wordsLines = (() => { font(9.5); return wrap(amountInWords(c.total), 92); })();
+    const noteLines = f.notes ? (() => { font(9.5); return wrap(f.notes, 92); })() : [];
+    const footH = Math.max(rows.length * 6.5 + 12, wordsLines.length * lh(9.5) + noteLines.length * lh(9.5) + 16) + 22;
+    if (y + footH > BOTTOM) { pdf.addPage(); y = 22; }
+    y += 4;
+    const SX = 120;
+    yl = y; yr = y;
+    font(8.5, "bold", COL.muted); text("Amount in words", M, yl); yl += 5;
+    font(9.5, "normal", COL.ink); wordsLines.forEach(l => { text(l, M, yl); yl += lh(9.5); });
+    if (noteLines.length) {
+      yl += 3; font(8.5, "bold", COL.muted); text("Note", M, yl); yl += 5;
+      font(9.5, "normal", COL.ink); noteLines.forEach(l => { text(l, M, yl); yl += lh(9.5); });
+    }
+    rows.forEach(([label, v, cls]) => {
+      const val = v < 0 ? "- " + rs(-v) : rs(v);
+      if (cls.startsWith("due")) {
+        const paid = cls.includes("paid");
+        yr += 1.5;
+        pdf.setFillColor(...(paid ? COL.glacier : COL.marigold));
+        pdf.roundedRect(SX - 3, yr - 5.2, R - SX + 3, 9, 1, 1, "F");
+        font(11.5, "bold", paid ? COL.pine : COL.dueInk);
+        text(label, SX, yr + 0.6); text(val, R - 3, yr + 0.6, { align: "right" });
+        yr += 8;
+      } else if (cls === "grand") {
+        hline(yr - 3.4, COL.pine, 0.5, SX - 3, R);
+        yr += 1.5;
+        font(11, "bold", COL.ink);
+        text(label, SX, yr); text(val, R, yr, { align: "right" });
+        yr += 6.5;
+      } else {
+        font(10, "normal", cls === "muted" ? COL.muted : COL.ink);
+        text(label, SX, yr); text(val, R, yr, { align: "right" });
+        yr += 6;
+      }
+    });
+    y = Math.max(yl, yr) + 10;
+
+    // Closing
+    hline(y - 4, COL.glacier);
+    font(13, "bold", COL.pine, "times");
+    text("Thank you for staying with us.", M, y + 2);
+    font(8.5, "normal", COL.muted);
+    text("This is a computer-generated bill and needs no signature.", M, y + 7.5);
+
+    const pages = pdf.getNumberOfPages();
+    if (pages > 1) {
+      for (let p = 1; p <= pages; p++) {
+        pdf.setPage(p); font(8, "normal", COL.muted);
+        text(`Invoice ${rec.invoiceNo}  -  page ${p} of ${pages}`, R, H - 8, { align: "right" });
+      }
+    }
+    pdf.setProperties({
+      title: `${c.gstRate > 0 ? "Tax Invoice" : "Invoice"} ${rec.invoiceNo}`,
+      subject: pdfSafe(`Bill for ${f.guestName}`),
+      author: pdfSafe(biz.name),
+      creator: pdfSafe(biz.name)
+    });
+    return pdf;
+  }
+
+  const pdfFileName = (rec) => {
+    const safe = rec.form.guestName.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "_");
+    return `Bill_${rec.invoiceNo}${safe ? "_" + safe : ""}.pdf`;
+  };
+
+  /* ---------------- Save / output ---------------- */
+  function showValidation(errs) {
+    const box = $("errors");
+    if (!errs.length) { box.hidden = true; box.innerHTML = ""; return; }
+    box.innerHTML = "<strong>Fix these before saving:</strong><ul>" + errs.map(e => `<li>${escapeHtml(e)}</li>`).join("") + "</ul>";
+    box.hidden = false;
+  }
+
+  function saveBill() {
+    showErrors = true;
+    const { f, c } = refresh();
+    const errs = validate(f, c);
+    showValidation(errs);
+    if (errs.length) {
+      $("errors").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      const first = document.querySelector('#billForm [aria-invalid="true"]');
+      if (first) first.focus({ preventScroll: true });
+      return null;
+    }
+    const isNew = !editing;
+    const ref = editing || { invoiceNo: takeInvoiceNo(), billDate: todayYMD() };
+    const record = { ...ref, form: f, total: c.total, due: c.due, savedAt: new Date().toISOString() };
+    const bills = load(KEYS.bills, []);
+    const idx = bills.findIndex(b => b.invoiceNo === ref.invoiceNo);
+    if (idx >= 0) bills[idx] = record; else bills.unshift(record);
+    if (!save(KEYS.bills, bills)) {
+      toast("Couldn't save on this device (storage full or blocked). The PDF still works.");
+    }
+    editing = ref;
+    dirty = false;
+    showErrors = false;
+    refresh();
+    record.isNew = isNew;
+    return record;
+  }
+
+  function pdfReady() {
+    if (window.jspdf && window.jspdf.jsPDF) return true;
+    toast("PDF tool didn't load. Check the internet connection, or use Save & print.");
+    return false;
+  }
+
+  function downloadPDF() {
+    if (!pdfReady()) return;
+    const rec = saveBill();
+    if (!rec) return;
+    try {
+      buildPDF(rec).save(pdfFileName(rec));
+      toast(`Bill ${rec.invoiceNo} ${rec.isNew ? "saved" : "updated"} and downloaded`);
+    } catch (e) {
+      console.error(e);
+      toast("Couldn't create the PDF. Use Save & print instead.");
+    }
+  }
+
+  async function sharePDF() {
+    if (!pdfReady()) return;
+    const rec = saveBill();
+    if (!rec) return;
+    let file;
+    try {
+      const blob = buildPDF(rec).output("blob");
+      file = new File([blob], pdfFileName(rec), { type: "application/pdf" });
+      await navigator.share({ files: [file], title: `Invoice ${rec.invoiceNo}`, text: `Bill from ${biz.name}` });
+      toast(`Bill ${rec.invoiceNo} shared`);
+    } catch (e) {
+      if (e && e.name === "AbortError") return; // person closed the share sheet
+      console.error(e);
+      if (file) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(file); a.download = file.name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        toast("Sharing isn't available here, so the PDF was downloaded instead.");
+      } else toast("Couldn't create the PDF. Use Save & print instead.");
+    }
+  }
+
+  function printBill() {
+    const rec = saveBill();
+    if (!rec) return;
+    toast(`Bill ${rec.invoiceNo} ${rec.isNew ? "saved" : "updated"}`);
+    setTimeout(() => window.print(), 50);
+  }
+
+  function setCheckoutDefault() {
+    const ci = $("checkIn").value, co = $("checkOut").value;
+    if (ci && (!co || nightsBetween(ci, co) < 0)) $("checkOut").value = addDays(ci, 1);
+  }
+
+  function resetForm() {
+    $("billForm").reset();
+    items.length = 0;
+    renderItems();
+    editing = null;
+    dirty = false;
+    showErrors = false;
+    showValidation([]);
+    FIELDS.forEach(id => $(id).removeAttribute("aria-invalid"));
+    $("checkIn").value = todayYMD();
+    setCheckoutDefault();
+    refresh();
+  }
+
+  function refreshBanner() {
+    const saved = editing && load(KEYS.bills, []).some(b => b.invoiceNo === editing.invoiceNo);
+    $("editBanner").hidden = !saved;
+    if (saved) {
+      $("editBannerText").textContent = dirty
+        ? `Changes to bill ${editing.invoiceNo} aren't saved yet. Saving keeps the same number.`
+        : `Bill ${editing.invoiceNo} is saved. Changes here will update it.`;
+    }
+  }
+
+  function startNewBill() {
+    if (dirty && !confirm("Discard the unsaved changes and start a new bill?")) return;
+    resetForm();
+    $("checkIn").focus();
+  }
+
+  function loadBill(rec) {
+    resetForm();
+    const f = rec.form || {};
+    FIELDS.forEach(k => { if (f[k] !== undefined) $(k).value = f[k]; });
+    (f.items || []).forEach(i => items.push({ desc: i.desc || "", qty: i.qty ?? 1, rate: i.rate ?? "" }));
+    renderItems();
+    editing = { invoiceNo: rec.invoiceNo, billDate: rec.billDate };
+    dirty = false;
+    refresh();
+  }
+
+  /* ---------------- Saved bills dialog ---------------- */
+  function renderHistory() {
+    const q = $("historySearch").value.trim().toLowerCase();
+    const qDigits = q.replace(/\D/g, "");
+    const list = $("historyList");
+    const bills = load(KEYS.bills, []).filter(b => b && b.form && (!q ||
+      b.invoiceNo.includes(q) || (b.form.guestName || "").toLowerCase().includes(q) ||
+      (qDigits && (b.form.guestPhone || "").replace(/\D/g, "").includes(qDigits))));
+    list.innerHTML = "";
+    if (!bills.length) {
+      const li = document.createElement("li");
+      const s = document.createElement("span"); s.className = "h-sub";
+      s.textContent = q ? "No bills match that search." : "No saved bills yet. A bill is saved here when you download, share or print it.";
+      li.appendChild(s); list.appendChild(li);
+      return;
+    }
+    bills.forEach(b => {
+      const li = document.createElement("li");
+      const main = document.createElement("div"); main.className = "h-main";
+      main.textContent = `${b.form.guestName}  ·  ${b.invoiceNo}`;
+      const amt = document.createElement("div"); amt.className = "h-amt"; amt.textContent = inr(b.total);
+      const sub = document.createElement("div"); sub.className = "h-sub";
+      sub.textContent = `${fmtDate(b.form.checkIn)} to ${fmtDate(b.form.checkOut)}  ·  ${b.form.guestPhone}` + (b.due > 0 ? `  ·  ${inr(b.due)} due` : "");
+      const acts = document.createElement("div"); acts.className = "h-actions";
+      const open = document.createElement("button"); open.type = "button"; open.className = "btn-link"; open.textContent = "Open";
+      open.addEventListener("click", () => {
+        if (dirty && !confirm("Discard the unsaved changes on the current bill?")) return;
+        loadBill(b); $("historyDlg").close(); toast(`Opened bill ${b.invoiceNo}`);
+      });
+      const del = document.createElement("button"); del.type = "button"; del.className = "btn-link danger"; del.textContent = "Delete";
+      del.addEventListener("click", () => {
+        if (!confirm(`Delete bill ${b.invoiceNo} for ${b.form.guestName}? This can't be undone.`)) return;
+        save(KEYS.bills, load(KEYS.bills, []).filter(x => x.invoiceNo !== b.invoiceNo));
+        if (editing && editing.invoiceNo === b.invoiceNo) { editing = null; refresh(); }
+        renderHistory();
+      });
+      acts.append(open, del);
+      li.append(main, amt, sub, acts);
+      list.appendChild(li);
+    });
+  }
+
+  function downloadFile(name, content, type) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([content], { type }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
+  $("exportBackup").addEventListener("click", () => {
+    const data = { app: "hgh-bill-generator", version: 1, exportedAt: new Date().toISOString(), business: biz, bills: load(KEYS.bills, []) };
+    downloadFile(`bills-backup-${todayYMD()}.json`, JSON.stringify(data, null, 2), "application/json");
+  });
+  $("exportCsv").addEventListener("click", () => {
+    const bills = load(KEYS.bills, []);
+    if (!bills.length) { toast("No saved bills to export yet."); return; }
+    const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const head = ["Invoice no", "Bill date", "Guest", "Phone", "Check-in", "Check-out", "Room", "Total", "Paid", "Due", "Paid by"];
+    const rows = bills.map(b => {
+      const c = calculate({ ...b.form, items: b.form.items || [] });
+      return [b.invoiceNo, b.billDate, b.form.guestName, b.form.guestPhone, b.form.checkIn, b.form.checkOut, b.form.roomDesc,
+        c.total.toFixed(2), c.advance.toFixed(2), c.due.toFixed(2), b.form.payMode].map(cell).join(",");
+    });
+    downloadFile(`bills-${todayYMD()}.csv`, "﻿" + [head.join(","), ...rows].join("\r\n"), "text/csv");
+  });
+  $("importBackup").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const incoming = Array.isArray(data) ? data : data.bills;
+      if (!Array.isArray(incoming)) throw new Error("no bills");
+      const valid = incoming.filter(b => b && /^\d{10,}$/.test(b.invoiceNo) && b.form && b.form.guestName);
+      const bills = load(KEYS.bills, []);
+      const have = new Set(bills.map(b => b.invoiceNo));
+      const added = valid.filter(b => !have.has(b.invoiceNo));
+      const merged = [...bills, ...added].sort((a, b) => b.invoiceNo.localeCompare(a.invoiceNo));
+      save(KEYS.bills, merged);
+      if (data.business && data.business.name && confirm("Also restore the business details from this backup?")) {
+        biz = { ...DEFAULT_BIZ, ...data.business }; save(KEYS.biz, biz); renderBiz();
+      }
+      renderHistory(); refresh();
+      toast(`Restored ${plural(added.length, "bill")}` + (valid.length > added.length ? ` (${valid.length - added.length} already here)` : ""));
+    } catch (err) {
+      console.error(err);
+      toast("That file isn't a bill backup from this app.");
+    }
+  });
+
+  /* ---------------- Settings dialog ---------------- */
+  function openSettings() {
+    $("sName").value = biz.name; $("sAddress").value = biz.address; $("sPhone").value = biz.phone;
+    $("sEmail").value = biz.email; $("sGstin").value = biz.gstin;
+    ["sName", "sGstin"].forEach(id => $(id).removeAttribute("aria-invalid"));
+    $("settingsDlg").showModal();
+  }
+  $("settingsForm").addEventListener("submit", (e) => {
+    const name = $("sName").value.trim();
+    const gstin = $("sGstin").value.trim().toUpperCase();
+    if (!name) { e.preventDefault(); $("sName").setAttribute("aria-invalid", "true"); $("sName").focus(); return; }
+    if (gstin && !GSTIN_RE.test(gstin)) { e.preventDefault(); $("sGstin").setAttribute("aria-invalid", "true"); $("sGstin").focus(); toast("GSTIN should be 15 characters, starting with 2 digits."); return; }
+    biz = { name, address: $("sAddress").value.trim(), phone: $("sPhone").value.trim(), email: $("sEmail").value.trim(), gstin };
+    save(KEYS.biz, biz);
+    renderBiz();
+    refresh();
+    toast("Business details saved");
+  });
+
+  /* ---------------- Toast ---------------- */
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 3200);
+  }
+
+  /* ---------------- Wire up ---------------- */
+  $("billForm").addEventListener("input", () => { dirty = true; refresh(); });
+  $("billForm").addEventListener("change", () => refresh());
+  $("billForm").addEventListener("submit", (e) => e.preventDefault());
+  $("checkIn").addEventListener("change", () => { setCheckoutDefault(); refresh(); });
+  $("downloadBtn").addEventListener("click", downloadPDF);
+  $("shareBtn").addEventListener("click", sharePDF);
+  $("printBtn").addEventListener("click", printBill);
+  $("newBtn").addEventListener("click", startNewBill);
+  $("bannerNewBtn").addEventListener("click", startNewBill);
+  $("openHistory").addEventListener("click", () => { $("historySearch").value = ""; renderHistory(); $("historyDlg").showModal(); $("historySearch").focus(); });
+  $("historySearch").addEventListener("input", renderHistory);
+  $("openSettings").addEventListener("click", openSettings);
+  document.querySelectorAll("dialog [data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+  document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p" && !document.querySelector("dialog[open]")) { e.preventDefault(); printBill(); }
+  });
+  window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+  // Show "Share" only where the browser can share files (most phones, Windows/macOS Chrome & Edge, Safari).
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [new File(["x"], "t.pdf", { type: "application/pdf" })] })) {
+      $("shareBtn").hidden = false;
+      $("downloadBtn").className = "btn btn-ghost";
+    }
+  } catch { /* sharing not supported */ }
+
+  renderBiz();
+  renderItems();
+  resetForm();
+})();
 </script>
-
 </body>
 </html>
